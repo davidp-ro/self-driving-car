@@ -2,6 +2,8 @@
 
 from detection import detect
 
+# FILE_NAME = "test_data/test_image.jpg"
 FILE_NAME = "test_data/test_video.mp4"
 
+# detect(FILE_NAME, "image")
 detect(FILE_NAME, "video")

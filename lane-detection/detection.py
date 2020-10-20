@@ -18,13 +18,15 @@ def detect(file_name: str, data_type: str = "video"):
                 if not resp:  # EOF
                     print(f'Reached the end of the file.')
                     break
-                analyzeFrame(frame, file_name)
                 if cv2.waitKey(1) == ord('q'):  # If Q is pressed, quit the video
+                    _cleanup(cap)
                     break
+                analyzeFrame(frame, file_name)
     elif data_type == "image":
         image = np.copy(cv2.imread(file_name))
         analyzeFrame(image, file_name)
         if cv2.waitKey(0) == ord('q'):
+            _cleanup()
             sys.exit()
     sys.exit()
 
@@ -85,8 +87,9 @@ def _resizeWithAspectRatio(original_image, width=None, height=None, inter=cv2.IN
     return cv2.resize(original_image, dim, interpolation=inter)
 
 
-def _cleanup(cap: cv2.VideoCapture) -> None:
-    cap.release()
+def _cleanup(cap: cv2.VideoCapture = None) -> None:
+    if cap != None:
+        cap.release()
     cv2.destroyAllWindows()
 
 

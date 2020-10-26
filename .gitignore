@@ -1,3 +1,9 @@
+# Idea
+.idea/
+
+# venv
+self-driving-car/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

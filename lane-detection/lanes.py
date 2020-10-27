@@ -1,10 +1,27 @@
-from detection import detect
+from detection import Detect
+
+config = {
+    'showPreviewWindow': True,
+    'previewHeight': 480,
+
+    'detectOuterLanes': False,
+    'ignoreRightOuterLine': True,
+    'drawOuterLanes': False,
+
+    'showMaskedImage': False,
+    'showGrayscaleImage': False,
+    'showConfigText': True,
+
+    'carPositionDetection': True,
+}
+
+detection = Detect(config)
 
 # FILE_NAME = "test_data/test_image.jpg"
 FILE_NAME = "test_data/test_video.mp4"
 
-# detect(FILE_NAME, "image")
-detect(FILE_NAME, "video")
+# detection.detect(FILE_NAME, "image")
+detection.detect(FILE_NAME, "video")
 
 """
 About:

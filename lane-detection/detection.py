@@ -214,7 +214,6 @@ def _resizeWithAspectRatio(original_image: np.array, width: int = None, height: 
     :param height: Optional, the new height
     :return: The resized image
     """
-    dim = None
     inter = cv2.INTER_AREA
     (h, w) = original_image.shape[:2]
 
@@ -299,7 +298,7 @@ def __regionsOfInterestForRoad(original_image: np.array) -> np.array:
     # Each polygon here is like this:
     #   [(lower_left, lower_right, upper_right, upper_left)]
     polygons = np.array([
-        [(0, image_height - 100), (300, image_height - 200), (300, midway - 100), (0, midway + 100)],  # LEFT
+        [(0, image_height - 100), (300, image_height - 200), (250, midway), (50, midway + 150)],  # LEFT
         [(800, image_height), (1200, image_height), (1000, midway), (700, midway)]  # RIGHT
     ])
     mask = np.zeros_like(original_image)

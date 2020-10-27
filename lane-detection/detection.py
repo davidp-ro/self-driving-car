@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 import sys
 import warnings
+import queue
+import math
 
 """
 Uses the Hough Lines Method to detect lanes.
@@ -33,7 +35,8 @@ config = {
     'drawOuterLanes': True,
     'showMaskedImage': False,
     'showGrayscaleImage': False,
-    'showConfigText': True
+    'showConfigText': True,
+    'neededDiffIterations': 6,
 }
 
 
@@ -92,12 +95,16 @@ def analyzeFrame(current_frame: np.array, file_name: str = "Unknown filename") -
     else:
         averaged_outer_lines = None
 
+    #print(averaged_inner_lines)
+    checkCarPosition(current_frame.shape, averaged_inner_lines, averaged_outer_lines)
+
     lanes_image = displayLanes(
         current_frame,
         inner_lanes=averaged_inner_lines,
         outer_lanes=averaged_outer_lines if config['drawOuterLanes'] else None
     )
     final_image = cv2.addWeighted(current_frame, 0.8, lanes_image, 1, 1)
+    cv2.line(final_image, (int(final_image.shape[1] / 2), final_image.shape[0]), (int(final_image.shape[1] / 2), final_image.shape[0] - 50), (255, 0, 0), 10)
 
     final_image = _resizeWithAspectRatio(final_image, height=config['previewHeight'])
 
@@ -113,9 +120,9 @@ def displayConfig(original_image: np.array) -> None:
     """
     message = f"Config: detectOuter={config['detectOuterLanes']}&draw={config['drawOuterLanes']} ignoreRightOuter={config['ignoreRightOuterLine']}"
     cv2.putText(original_image, message,
-                (5, original_image.shape[0] - 5),
-                cv2.FONT_HERSHEY_DUPLEX, 0.6,
-                (255, 255, 255), 2)
+                (5, 20),
+                cv2.FONT_HERSHEY_DUPLEX, 0.7,
+                (255, 255, 255), 1)
 
 
 def displayLanes(original_image: np.array, inner_lanes: np.array, outer_lanes: np.array) -> np.array:
@@ -148,6 +155,52 @@ def displayLanes(original_image: np.array, inner_lanes: np.array, outer_lanes: n
                 print(f'Overflow when drawing OUTER lane!, coords: x1={x1}, y1={y1}, x2={x2}, y2={y2}')
 
     return lanes_image
+
+
+averaged_lower_diffs: int = 0
+averaged_upper_diffs: int = 0
+diff_iterations: int = 0
+latest_3_lower: queue.Queue = queue.Queue(maxsize=config['neededDiffIterations'])
+latest_3_upper: queue.Queue = queue.Queue(maxsize=config['neededDiffIterations'])
+
+
+def checkCarPosition(image_shape: np.array, inner_lanes: np.array, outer_lanes: np.array):
+    global diff_iterations
+    global averaged_lower_diffs
+    global averaged_upper_diffs
+    global latest_3_lower
+    global latest_3_upper
+    sqn_lwr = 0  # FIXME: Not updating!
+
+    def __checkPosition(lwr, upr):
+        nonlocal sqn_lwr
+        sgn_lwr = math.copysign(1, lwr)
+        if sgn_lwr == math.copysign(1, upr):
+            if sqn_lwr < 0:
+                print('LEFT')
+            else:
+                print('RIGHT')
+        else:
+            print('---')
+
+    mid = int(image_shape[1] / 2)
+    left_x1, _, left_x2, _ = inner_lanes[0]
+    right_x1, _, right_x2, _ = inner_lanes[1]
+    x1_diffs = int(((mid - left_x1) + (right_x1 - mid)) / 2)
+    x2_diffs = int(((mid - left_x2) + (right_x2 - mid)) / 2)
+
+    if diff_iterations < config['neededDiffIterations']:
+        diff_iterations += 1
+        averaged_lower_diffs = int((averaged_lower_diffs + x1_diffs) / 2)
+        averaged_upper_diffs = int((averaged_upper_diffs + x2_diffs) / 2)
+        latest_3_lower.put(averaged_lower_diffs)
+        latest_3_upper.put(averaged_upper_diffs)
+    else:
+        lwr = averaged_lower_diffs - x1_diffs
+        upr = averaged_upper_diffs - x2_diffs
+        #print(f'Diffs, lower={lwr}, upper={upr}')
+        __checkPosition(lwr, upr)
+
 
 
 def _resizeWithAspectRatio(original_image: np.array, width: int = None, height: int = None) -> np.array:

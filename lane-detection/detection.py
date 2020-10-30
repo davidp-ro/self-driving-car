@@ -5,6 +5,7 @@ import warnings
 from typing import Tuple
 
 from utils import Utils
+from car_controller import CarController
 
 """
 Uses the Hough Lines Method to detect lanes.
@@ -34,6 +35,7 @@ Call:
 class Detect:
     def __init__(self, cfg: dict):
         self.config: dict = cfg
+        self.controller = CarController()
         self.latest_distance_from_left: Tuple[int, int] = (0, 0)  # Lower, Upper
         self.latest_distance_from_right: Tuple[int, int] = (0, 0)  # Lower, Upper
 
@@ -99,7 +101,17 @@ class Detect:
             averaged_outer_lines = None
 
         if self.config['carPositionDetection']:
-            self._checkCarPosition(current_frame, averaged_inner_lines, averaged_outer_lines)
+            command = self._checkCarPosition(current_frame, averaged_inner_lines, averaged_outer_lines)
+            if command == 0:
+                self.controller.forward()
+            elif command == -1:
+                # Car is to the left, go right
+                self.controller.goRight()
+            elif command == 1:
+                # Car is to the right, go left
+                self.controller.goLeft()
+            else:
+                self.controller.stop()
 
         if not self.config['showPreviewWindow']:
             return  # Do not show the preview
@@ -154,23 +166,55 @@ class Detect:
                 print('No data available, stop / unavailable')
                 return 9
             else:
-                print(
-                    f'Left lane NOT found! Falling back to distance from right line: {self.latest_distance_from_right}')
-                # TODO
+                # Maintain constant distance from the right line
+                # print(f'Left lane NOT found! Falling back to distance from right line: {self.latest_distance_from_right}')
+                last_lower, last_upper = self.latest_distance_from_right
+                now_lower, now_upper = right_lower - mid, right_upper - mid
+                distance_lower = last_lower - now_lower
+                distance_upper = last_upper - now_upper
+                average = int((distance_lower * 1.5 + distance_upper) / 2)  # distance_lower has more weight
+                threshold = self.config['oneLineTrackingThreshold']
+                negative_threshold = threshold - (2 * threshold)
+                # print(f'Distances, Lower:{distance_lower}, Upper:{distance_upper}')
+                # print(f'Average:{average}')
+                # print(f'Threshold, Normal:{threshold}, Negative:{negative_threshold}')
+                if average > threshold:
+                    return 1
+                elif average < negative_threshold:
+                    return -1
+                else:
+                    return 0
+
         elif right_lower == 0:
             # Right lane couldn't be found:
             if self.latest_distance_from_left == (0, 0):
                 print('No data available, stop / unavailable')
                 return 9
             else:
-                print(
-                    f'Right lane NOT found! Falling back to distance from left line: {self.latest_distance_from_left}')
-                # TODO
+                # Maintain constant distance from the left line
+                # print(f'Right lane NOT found! Falling back to distance from left line: {self.latest_distance_from_left}')
+                last_lower, last_upper = self.latest_distance_from_left
+                now_lower, now_upper = mid - left_lower, mid - left_upper
+                distance_lower = last_lower - now_lower
+                distance_upper = last_upper - now_upper
+                average = int((distance_lower * 1.5 + distance_upper) / 2)  # distance_lower has more weight
+                threshold = self.config['oneLineTrackingThreshold']
+                negative_threshold = threshold - (2 * threshold)
+                # print(f'Distances, Lower:{distance_lower}, Upper:{distance_upper}')
+                # print(f'Average:{average}')
+                # print(f'Threshold, Normal:{threshold}, Negative:{negative_threshold}')
+                if average > threshold:
+                    return 1
+                elif average < negative_threshold:
+                    return -1
+                else:
+                    return 0
         else:
             # Both lanes found, update distances
             self.latest_distance_from_left = (mid - left_lower, mid - left_upper)
             self.latest_distance_from_right = (right_lower - mid, right_upper - mid)
-            print(f'Both found, ldLeft={self.latest_distance_from_left} - ldRight={self.latest_distance_from_right}')
+            # print(f'Both found, ldLeft={self.latest_distance_from_left} - ldRight={self.latest_distance_from_right}')
+            # TODO
 
         return 0
 

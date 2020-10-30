@@ -13,6 +13,7 @@ config = {
     'showConfigText': True,
 
     'carPositionDetection': True,
+    'oneLineTrackingThreshold': 10,
 }
 
 detection = Detect(config)

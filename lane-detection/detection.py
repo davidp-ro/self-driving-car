@@ -38,6 +38,8 @@ class Detect:
         self.controller = CarController()
         self.latest_distance_from_left: Tuple[int, int] = (0, 0)  # Lower, Upper
         self.latest_distance_from_right: Tuple[int, int] = (0, 0)  # Lower, Upper
+        self.lanePolygons: np.array = None
+        self.roadPolygons: np.array = None
 
     def detect(self, file_name: str, data_type: str) -> None:
         """
@@ -51,6 +53,7 @@ class Detect:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=RuntimeWarning)
                 cap = cv2.VideoCapture(file_name)
+                self._setRegionsOfInterestPerConfig(cap.read())
                 while cap.isOpened():
                     resp, frame = cap.read()
                     if not resp:  # EOF
@@ -62,11 +65,46 @@ class Detect:
                     self._analyzeFrame(frame, file_name)
         elif data_type == "image":
             image = np.copy(cv2.imread(file_name))
+            self._setRegionsOfInterestPerConfig((True, image))
             self._analyzeFrame(image, file_name)
             if cv2.waitKey(0) == ord('q'):
                 self._cleanup()
                 sys.exit()
         sys.exit()
+
+    def _setRegionsOfInterestPerConfig(self, first_frame: cv2.VideoCapture or Tuple[bool, np.array]) -> None:
+        """
+        Set the correct region of interest depending on the road type
+
+        :param first_frame: If image pass (True, the_image), else pass cap.read()
+        """
+        resp, frame = first_frame
+        if not resp:
+            raise Exception("Couldn't read first frame, so unable to generate regions of interest")
+        else:
+            image_height = frame.shape[0]
+            midway = int(image_height / 2)
+
+        road_type = self.config['roadType']
+        # The zone are like this:
+        #   [(lower_left, lower_right, upper_right, upper_left)]
+        if road_type == 'small':
+            self.lanePolygons = np.array([
+                [(200, image_height), (1100, image_height), (800, image_height - 300), (500, midway)]
+            ])
+            self.roadPolygons = np.array([
+                [(0, image_height - 100), (300, image_height - 200), (250, midway), (50, midway + 150)],  # LEFT
+                [(800, image_height), (1200, image_height), (1000, midway), (700, midway)]  # RIGHT
+            ])
+        elif road_type == 'medium':
+            self.lanePolygons = np.array([
+                [(300, image_height), (900, image_height), (700, image_height - 180), (550, image_height - 180)]
+            ])
+            self.roadPolygons = np.array([
+                [(200, image_height), (1100, image_height), (800, image_height - 300), (500, midway)]
+            ])
+        else:  # road_type == 'large'
+            pass
 
     def _analyzeFrame(self, current_frame: np.array, file_name: str = "Unknown filename") -> None:
         """
@@ -76,12 +114,14 @@ class Detect:
         :param file_name: Optional, File name to be displayed on the title bar
         """
         canny = self._generateGradients(current_frame)
-
+        # cv2.imshow('canny', canny)
         # Inner lanes:
         cropped_image = self._regionOfInterest(canny)
         if self.config['showMaskedImage']:
-            cv2.imshow("Masked Inner Lanes",
-                       Utils.resizeWithAspectRatio(cropped_image, height=self.config['previewHeight']))
+            cv2.imshow('AAAA', cropped_image)
+            # cv2.imshow("Masked Inner Lanes",
+            #            Utils.resizeWithAspectRatio(cropped_image, height=self.config['previewHeight']))
+
         found_lanes = cv2.HoughLinesP(cropped_image, 2, np.pi / 180, 100, np.array([]), minLineLength=40,
                                       maxLineGap=5)
         averaged_inner_lines = self._averageSlopeIntercept(current_frame, found_lanes)  # Smooth out lines
@@ -231,7 +271,11 @@ class Detect:
 
         if inner_lanes is not None:
             for lane in inner_lanes:
-                x1, y1, x2, y2 = lane
+                try:
+                    x1, y1, x2, y2 = lane
+                except ValueError:
+                    print(f'Lanes not found!')
+                    return lanes_image
                 try:
                     cv2.line(lanes_image, (x1, y1), (x2, y2), (0, 255, 0), 5)
                 except OverflowError:
@@ -257,7 +301,8 @@ class Detect:
         :return: The gradients image
         """
         grayscale_image = cv2.cvtColor(original_image, cv2.COLOR_RGB2GRAY)  # Convert to grayscale
-        grayscale_image = cv2.addWeighted(grayscale_image, 3, grayscale_image, 0, -75)  # Increase the contrast
+        # Increase the contrast:
+        grayscale_image = cv2.addWeighted(grayscale_image, 3, grayscale_image, 0, self.config['greyscaleModifier'])
         # Increasing the contrast to give me better precision
         # https://stackoverflow.com/questions/39308030/how-do-i-increase-the-contrast-of-an-image-in-python-opencv
         blurred_image = cv2.GaussianBlur(grayscale_image, (5, 5), 0)  # Apply Gaussian Blur to image to smooth out edges
@@ -278,44 +323,28 @@ class Detect:
         else:
             return self._regionsOfInterestForRoad(original_image)
 
-    @staticmethod
-    def _regionOfInterestForLane(original_image: np.array) -> np.array:
+    def _regionOfInterestForLane(self, original_image: np.array) -> np.array:
         """
         Generates a mask that covers the current lane
 
         :param original_image: Original image
         :return: The image with the mask applied to it.
         """
-        image_height = original_image.shape[0]  # 0 => Height | 1 => Width
-        # Each polygon here is like this:
-        #   [(lower_left, lower_right, upper_right, upper_left)]
-        polygons = np.array([
-            [(200, image_height), (1100, image_height), (800, image_height - 300), (500, int(image_height / 2))]
-        ])
         mask = np.zeros_like(original_image)
-        cv2.fillPoly(mask, polygons, 255)
+        cv2.fillPoly(mask, self.lanePolygons, 255)
         # cv2.imshow("MASK FOR LANE", mask)
         masked_image = cv2.bitwise_and(original_image, mask)
         return masked_image
 
-    @staticmethod
-    def _regionsOfInterestForRoad(original_image: np.array) -> np.array:
+    def _regionsOfInterestForRoad(self, original_image: np.array) -> np.array:
         """
         Generates a mask that covers the road margins
 
         :param original_image: Original image
         :return: The image with the mask applied to it.
         """
-        image_height = original_image.shape[0]  # 0 => Height | 1 => Width
-        midway = int(image_height / 2)
-        # Each polygon here is like this:
-        #   [(lower_left, lower_right, upper_right, upper_left)]
-        polygons = np.array([
-            [(0, image_height - 100), (300, image_height - 200), (250, midway), (50, midway + 150)],  # LEFT
-            [(800, image_height), (1200, image_height), (1000, midway), (700, midway)]  # RIGHT
-        ])
         mask = np.zeros_like(original_image)
-        cv2.fillPoly(mask, polygons, 255)
+        cv2.fillPoly(mask, self.roadPolygons, 255)
         # cv2.imshow("MASK FOR ROAD", mask)
         masked_image = cv2.bitwise_and(original_image, mask)
         return masked_image
@@ -332,13 +361,17 @@ class Detect:
         try:
             slope, intercept = lane_average
             y1 = original_image.shape[0]  # Start from bottom
-            y2 = int(y1 * (3 / 5))  # Go up to 3/5 of the image
+            y2 = int(y1 * 3/5)  # Go up to 3/5 of the image
+            # y2 = 600
             x1 = int((y1 - intercept) / slope)  # => x = (y-b)/m
             x2 = int((y2 - intercept) / slope)
+            # print('Coords: ', [x1, y1, x2, y2])
             return np.array([x1, y1, x2, y2])
         except TypeError:
             # This happens when lane_average can't be unpacked,
             # for example when dealing with really short lines (ie. dashed)
+            return np.array([0, 0, 0, 0])
+        except OverflowError:
             return np.array([0, 0, 0, 0])
 
     def _averageSlopeIntercept(self, original_image: np.array, lanes: np.array) -> np.array:
@@ -351,6 +384,8 @@ class Detect:
         """
         left_fit = []
         right_fit = []
+        if lanes is None:
+            return np.array([(0, 0), (0, 0)])
         for lane in lanes:
             x1, y1, x2, y2 = lane.reshape(4)
             parameters = np.polyfit((x1, x2), (y1, y2), 1)

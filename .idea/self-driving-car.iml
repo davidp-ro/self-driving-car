@@ -5,7 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/lane-detection" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/self-driving-car" />
     </content>
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="Remote Python 3.7.3 (sftp://pi@192.168.0.220:22/usr/bin/python3.7)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

@@ -2,7 +2,7 @@
  * @file commandParser.hpp
  * @author David Pescariu | https://github.com/davidp-ro
  * @brief Parser for the commands recieved via Serial
- * @version 1.0
+ * @version 1.1
  * @date 2020-11-28
  *
  * @copyright GPL-3.0 License
@@ -23,6 +23,7 @@ class CommandParser {
     Pins motorPins;
     uint8_t motorSpeed;  // Defaults to SPEED_FAST
     bool isInDebugMode;
+    String lastCommand;
 
     /**
      * @brief Set the motorSpeed with the value recieved

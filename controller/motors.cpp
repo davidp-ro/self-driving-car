@@ -2,7 +2,7 @@
  * @file motors.cpp
  * @author David Pescariu | https://github.com/davidp-ro
  * @brief Implementations for the prototipes in motors.hpp
- * @version 1.0
+ * @version 1.1
  * @date 2020-11-28
  *
  * @copyright GPL-3.0 License
@@ -12,13 +12,23 @@
 
 #include <Arduino.h>
 
+void initPins(Pins pins) {
+    pinMode(pins.PWM_LEFT, OUTPUT);
+    pinMode(pins.PWM_RIGHT, OUTPUT);
+    pinMode(pins.LEFT_FWD, OUTPUT);
+    pinMode(pins.LEFT_RWD, OUTPUT);
+    pinMode(pins.RIGHT_FWD, OUTPUT);
+    pinMode(pins.RIGHT_RWD, OUTPUT);
+    stop(pins);
+}
+
 void goForward(Pins pins, uint8_t speed) {
     analogWrite(pins.PWM_LEFT, speed);
     analogWrite(pins.PWM_RIGHT, speed);
     digitalWrite(pins.LEFT_FWD, HIGH);
     digitalWrite(pins.LEFT_RWD, LOW);
     digitalWrite(pins.RIGHT_FWD, HIGH);
-    digitalWrite(pins.RIGHT_FWD, LOW);
+    digitalWrite(pins.RIGHT_RWD, LOW);
 }
 
 void stop(Pins pins) {
@@ -27,7 +37,7 @@ void stop(Pins pins) {
     digitalWrite(pins.LEFT_FWD, LOW);
     digitalWrite(pins.LEFT_RWD, LOW);
     digitalWrite(pins.RIGHT_FWD, LOW);
-    digitalWrite(pins.RIGHT_FWD, LOW);
+    digitalWrite(pins.RIGHT_RWD, LOW);
 }
 
 void reverse(Pins pins) {
@@ -36,7 +46,7 @@ void reverse(Pins pins) {
     digitalWrite(pins.LEFT_FWD, LOW);
     digitalWrite(pins.LEFT_RWD, HIGH);
     digitalWrite(pins.RIGHT_FWD, LOW);
-    digitalWrite(pins.RIGHT_FWD, HIGH);
+    digitalWrite(pins.RIGHT_RWD, HIGH);
 }
 
 void turnSlightlyLeft(Pins pins) {
@@ -45,7 +55,7 @@ void turnSlightlyLeft(Pins pins) {
     digitalWrite(pins.LEFT_FWD, HIGH);
     digitalWrite(pins.LEFT_RWD, LOW);
     digitalWrite(pins.RIGHT_FWD, HIGH);
-    digitalWrite(pins.RIGHT_FWD, LOW);
+    digitalWrite(pins.RIGHT_RWD, LOW);
 }
 
 void turnLeft(Pins pins) {
@@ -54,7 +64,7 @@ void turnLeft(Pins pins) {
     digitalWrite(pins.LEFT_FWD, LOW);
     digitalWrite(pins.LEFT_RWD, HIGH);
     digitalWrite(pins.RIGHT_FWD, HIGH);
-    digitalWrite(pins.RIGHT_FWD, LOW);
+    digitalWrite(pins.RIGHT_RWD, LOW);
 }
 
 void turnSlightlyRight(Pins pins) {
@@ -63,7 +73,7 @@ void turnSlightlyRight(Pins pins) {
     digitalWrite(pins.LEFT_FWD, HIGH);
     digitalWrite(pins.LEFT_RWD, LOW);
     digitalWrite(pins.RIGHT_FWD, HIGH);
-    digitalWrite(pins.RIGHT_FWD, LOW);
+    digitalWrite(pins.RIGHT_RWD, LOW);
 }
 
 void turnRight(Pins pins) {
@@ -72,5 +82,5 @@ void turnRight(Pins pins) {
     digitalWrite(pins.LEFT_FWD, HIGH);
     digitalWrite(pins.LEFT_RWD, LOW);
     digitalWrite(pins.RIGHT_FWD, LOW);
-    digitalWrite(pins.RIGHT_FWD, HIGH);
+    digitalWrite(pins.RIGHT_RWD, HIGH);
 }

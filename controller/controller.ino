@@ -2,7 +2,7 @@
  * @file controller.ino
  * @author David Pescariu | https://github.com/davidp-ro
  * @brief Arduino UNO controller for the self-driving-car project.
- * @version 1.1
+ * @version 1.2
  * @date 2020-11-28
  *
  * @copyright GPL-3.0 License
@@ -31,7 +31,7 @@
  *      -> If distance < threshold, only accept the rev command
  *      -> Implement the get_distance functionality
  * 
- *  - Add some light to the car for extra *wow* ¯\_(ツ)_/¯
+ *  - Add some lights to the car for extra *wow* ¯\_(ツ)_/¯
  */
 
 #include "commandParser.hpp"
@@ -45,7 +45,7 @@ CommandParser commandParser(DEBUG_MODE);
 void setup() {
     // Serial
     Serial.begin(9600);
-    Serial.println("[INIT] Running version: 1.0");
+    Serial.println("[INIT] Running version: 1.2");
 
     // Motor setup
     motorPins.PWM_LEFT = 11;
@@ -54,13 +54,7 @@ void setup() {
     motorPins.LEFT_RWD = 12;
     motorPins.RIGHT_FWD = 9;
     motorPins.RIGHT_RWD = 8;
-    pinMode(motorPins.PWM_LEFT, OUTPUT);
-    pinMode(motorPins.PWM_RIGHT, OUTPUT);
-    pinMode(motorPins.LEFT_FWD, OUTPUT);
-    pinMode(motorPins.LEFT_RWD, OUTPUT);
-    pinMode(motorPins.RIGHT_FWD, OUTPUT);
-    pinMode(motorPins.RIGHT_RWD, OUTPUT);
-    stop(motorPins);
+    initPins(motorPins);
 
     // Set parser
     commandParser.assignPins(motorPins);

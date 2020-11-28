@@ -2,7 +2,7 @@
  * @file motors.hpp
  * @author David Pescariu | https://github.com/davidp-ro
  * @brief Functions that control the motors and the pin struct
- * @version 1.0
+ * @version 1.1
  * @date 2020-11-28
  *
  * @copyright GPL-3.0 License
@@ -28,6 +28,13 @@ typedef struct {
     uint8_t RIGHT_FWD;
     uint8_t RIGHT_RWD;
 } Pins;
+
+/**
+ * @brief Initialize the pins (set pinMode)
+ * 
+ * @param pins Pins struct 
+ */
+void initPins(Pins pins);
 
 /**
  * @brief Set the motors to go forward

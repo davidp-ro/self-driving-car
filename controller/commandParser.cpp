@@ -27,7 +27,7 @@ void CommandParser::setMotorSpeed(String recvSpeed) {
     }
 
     if (this->isInDebugMode) {
-        Serial.print("[DEBUG::CommandParser] Set the motorSpeed to");
+        Serial.print("[DEBUG::CommandParser] Set the motorSpeed to ");
         Serial.println(this->motorSpeed);
     }
 }

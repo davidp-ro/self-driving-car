@@ -1,15 +1,16 @@
 /**
  * @file motors.cpp
  * @author David Pescariu | https://github.com/davidp-ro
- * @brief Cpp file for motors.hpp
+ * @brief Implementations for the prototipes in motors.hpp
  * @version 1.0
  * @date 2020-11-28
- * 
+ *
  * @copyright GPL-3.0 License
  */
 
-#include "Arduino.h"
 #include "motors.hpp"
+
+#include <Arduino.h>
 
 void goForward(Pins pins, uint8_t speed) {
     analogWrite(pins.PWM_LEFT, speed);
@@ -73,4 +74,3 @@ void turnRight(Pins pins) {
     digitalWrite(pins.RIGHT_FWD, LOW);
     digitalWrite(pins.RIGHT_FWD, HIGH);
 }
-

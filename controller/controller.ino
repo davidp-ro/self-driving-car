@@ -30,6 +30,10 @@
  *  - Add support for distance sensor
  *      -> If distance < threshold, only accept the rev command
  *      -> Implement the get_distance functionality
+ *
+ *  - Add support for a MCU
+ *      -> If there is a sudden high acceleration stop
+ *      -> If the gyroscope shows that the car is too tilted stop
  * 
  *  - Add some lights to the car for extra *wow* ¯\_(ツ)_/¯
  */

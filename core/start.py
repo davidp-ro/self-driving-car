@@ -1,4 +1,33 @@
+"""
+ brief: Main file for the self-driving-car project.
+ author: David Pescariu | https://github.com/davidp-ro
+
+ Running:
+    python3.7 or python3 start.py
+
+    Args:
+        --headless -> Ensures that it can run headless by disabling the previews
+
+ Config:
+    showPreviewWindow -> If true will show the window with the lanes drawn on it
+    previewHeight -> Height of the preview window, scale is maintained
+    detectOuterLanes -> If false will skip detecting outer lanes
+    ignoreRightOuterLine -> If true, ignore the right outer lane to avoid overlapping
+    drawOuterLanes -> Show outer lanes (if detectOuterLanes is True)
+    showMaskedImage -> Show masked images
+    showGrayscaleImage -> Show the grayscale version of the original_image
+    showConfigText -> Show the small config 'dump' on screen
+    oneLineTrackingThreshold -> Threshold for the distance that is kept from the lane (in single-lane following mode)
+    greyscaleModifier -> Darken slightly: -75, Darken significantly: -150, Lighten: positive_value
+
+ copyright: GNU GPL v3 License
+"""
+
+import sys
 from controller import Controller
+from video_processor import VideoProcessor
+
+__version__ = "1.0"
 
 config = {
     'showPreviewWindow': False,
@@ -12,31 +41,27 @@ config = {
     'showGrayscaleImage': False,
     'showConfigText': False,
 
-    'carPositionDetection': True,
     'oneLineTrackingThreshold': 10,
-
-    # roadType -> small = 1 lane/director, medium / large = large roads / highways, test to see which one works better
-    'roadType': 'small',
-    # greyscaleModifier -> darken slightly: -75, darken significantly: -150, lighten: positive_value
     'greyscaleModifier': -75,
 }
 
 
 def main():
-    from time import sleep
+    if '--headless' in sys.argv:
+        # Make sure the config is valid for running headless
+        config['showPreviewWindow'] = False
+        config['drawOuterLanes'] = False
+        config['showMaskedImage'] = False
+        config['showGrayscaleImage'] = False
+        config['showConfigText'] = False
 
     controller = Controller('/dev/ttyACM0', baudrate=9600)
-    controller.goForward()
-    sleep(2)
-    controller.stop()
-    controller.reverse()
-    sleep(2)
-    controller.stop()
-    return None
+    processor = VideoProcessor(config, controller)
+    processor.run()
 
 
 if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        print('-----------')
+        print('==[Stopping]==')

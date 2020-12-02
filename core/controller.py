@@ -1,4 +1,5 @@
 import serial
+from exceptions import InvalidTurnArgument
 
 
 class Controller:
@@ -7,8 +8,7 @@ class Controller:
                  baudrate: int = 9600,
                  timeout: int = 1,
                  encoding: str = 'utf-8',
-                 terminator: str = '\n'
-                 ):
+                 terminator: str = '\n'):
         """
         Initialize the communication between the pi and the controller
 
@@ -56,9 +56,11 @@ class Controller:
         Execute a turn
 
         :param angle: If less than 0 turn left else turn right
+
+        :raises: InvalidTurnArgument if angle is < -180 or > 180
         """
-        assert (angle > -180), 'Angle must be more than -180'
-        assert (angle < 180), 'Angle must be less than 180'
+        if not (-180 < angle < 180):
+            raise InvalidTurnArgument(angle)
         if angle > 0:
             # Right turn
             if angle < 75:

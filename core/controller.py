@@ -1,8 +1,20 @@
+"""
+ brief: Part of the self-driving-car project, deals with communicating to the UNO Controller.
+ author: David Pescariu | https://github.com/davidp-ro
+
+ copyright: GNU GPL v3 License
+"""
+
+__version__ = '1.0'
+
 import serial
-from exceptions import InvalidTurnArgument
+from core.utils.exceptions import InvalidTurnArgument
 
 
 class Controller:
+    """
+    APIs for communicating with the UNO Controller.
+    """
     def __init__(self,
                  port: str,
                  baudrate: int = 9600,

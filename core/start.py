@@ -9,51 +9,44 @@
         --headless -> Ensures that it can run headless by disabling the previews
 
  Config:
-    showPreviewWindow -> If true will show the window with the lanes drawn on it
-    previewHeight -> Height of the preview window, scale is maintained
-    detectOuterLanes -> If false will skip detecting outer lanes
-    ignoreRightOuterLine -> If true, ignore the right outer lane to avoid overlapping
-    drawOuterLanes -> Show outer lanes (if detectOuterLanes is True)
-    showMaskedImage -> Show masked images
-    showGrayscaleImage -> Show the grayscale version of the original_image
-    showConfigText -> Show the small config 'dump' on screen
-    oneLineTrackingThreshold -> Threshold for the distance that is kept from the lane (in single-lane following mode)
-    greyscaleModifier -> Darken slightly: -75, Darken significantly: -150, Lighten: positive_value
+    GENERAL:
+     greyscaleModifier -> Increase Contrast: slightly: -75, significantly: -150, or lighten/decrease: positive_value
+     oneLineTrackingThreshold -> Threshold for the distance that is kept from the lane (in single-lane following mode)
+
+    DEBUG:
+     previewHeight -> Height of the preview window, scale is maintained
+     enableDebugImages -> If true, show the image with lanes on it, and all the other active ones.
+     showMaskedImage -> Show masked images
+     showGrayscaleImage -> Show the grayscale version of the original_image
 
  copyright: GNU GPL v3 License
 """
+
+__version__ = "1.1"
 
 import sys
 from controller import Controller
 from video_processor import VideoProcessor
 
-__version__ = "1.0"
-
 config = {
-    'showPreviewWindow': False,
+    'greyscaleModifier': -50,
+    'oneLineTrackingThreshold': 10,
+
     'previewHeight': 480,
-
-    'detectOuterLanes': False,
-    'ignoreRightOuterLine': True,
-    'drawOuterLanes': False,
-
+    'enableDebugImages': True,
     'showMaskedImage': False,
     'showGrayscaleImage': False,
     'showConfigText': False,
-
-    'oneLineTrackingThreshold': 10,
-    'greyscaleModifier': -75,
 }
 
 
 def main():
     if '--headless' in sys.argv:
         # Make sure the config is valid for running headless
+        config['enableDebugImages'] = False
         config['showPreviewWindow'] = False
-        config['drawOuterLanes'] = False
         config['showMaskedImage'] = False
         config['showGrayscaleImage'] = False
-        config['showConfigText'] = False
 
     controller = Controller('/dev/ttyACM0', baudrate=9600)
     processor = VideoProcessor(config, controller)

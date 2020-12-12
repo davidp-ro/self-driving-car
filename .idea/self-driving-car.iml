@@ -6,7 +6,7 @@
       <sourceFolder url="file://$MODULE_DIR$/core" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/self-driving-car" />
     </content>
-    <orderEntry type="jdk" jdkName="Remote Python 3.7.3 (sftp://pi@192.168.0.220:22/usr/bin/python3.7)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.7 (self-driving-car)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

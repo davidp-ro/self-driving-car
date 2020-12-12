@@ -5,12 +5,12 @@
  copyright: GNU GPL v3 License
 """
 
-__version__ = '1.0'
+__version__ = '1.2'
 
 import numpy as np
 import cv2
 import warnings
-from typing import Dict
+from typing import Dict, Union
 from core.controller import Controller
 from core.utils.exceptions import ReachedEOF
 from core.utils.utils import Utils
@@ -29,6 +29,7 @@ class VideoProcessor:
             -> Other values => Turn
         And finally sent commands to the controller.
     """
+
     def __init__(self, config: Dict, car_controller: Controller):
         """
         Process frames from the pi camera.
@@ -41,6 +42,10 @@ class VideoProcessor:
 
         self.controller = car_controller
         self.config = config
+        self.thresholds = {
+            'straight': 10,
+            'light_turn': 30,
+        }
 
     def run(self) -> None:
         """
@@ -63,26 +68,38 @@ class VideoProcessor:
                     break
                 else:
                     # Tasks for frame by frame
-                    frame = cv2.flip(frame, 0)
+                    frame: np.ndarray = cv2.flip(frame, 0)
                     frame = cv2.flip(frame, 1)
                     self._follow_lanes(frame)
 
-    def _follow_lanes(self, frame: np.array):
+    def _follow_lanes(self, frame: np.array) -> None:
         """
-        TODO: Docs
-        :param frame:
-        :return:
-        """
-        lanes = self._get_lanes(frame)
-        angle = self._calculate_steering_angle(frame, lanes)
-        if angle is None:
-            self.controller.stop()
-        elif angle == 0:
-            self.controller.goForward()
-        else:
-            self.controller.turn(angle)
+        Find the lanes, calculate the angle necessary to stay in the center,
+        then send the commands to the controller.
 
-    def _get_lanes(self, frame: np.array) -> np.array:
+        :param frame: Current frame
+        """
+        try:
+            lanes = self._get_lanes(frame)
+            angle = self._calculate_steering_angle(frame, lanes)
+            if angle is None:
+                self.controller.stop()
+            elif angle == 0:
+                self.controller.goForward()
+            else:
+                self.controller.turn(angle)
+        except Exception as e:
+            # ignore: too broad exception
+            self.controller.stop()
+            print(f'[FAIL::follow_lanes] {e}')
+
+    def _get_lanes(self, frame: np.ndarray) -> np.ndarray:
+        """
+        Get the lanes (cartesian coords. relative to the frame)
+
+        :param frame: Current frame to analyse
+        :return: [left_lane, right_lane], where each lane is [x1, y1, x2, y2]
+        """
         # Do canny edge detection
         canny = self._apply_canny(frame)
 
@@ -113,19 +130,37 @@ class VideoProcessor:
             cv2.imshow(f'VideoProcessor Preview - Version {__version__}', _final_image)
             return lanes
 
-    def _calculate_steering_angle(self, frame: np.array, lanes: np.array) -> int or None:
+    def _calculate_steering_angle(self, frame: np.ndarray, lanes: np.ndarray) -> Union[int, None]:
         """
-        For each frame, find the lanes, calculate the steering angle.
+        Calculate the steering angle necessary to keep the car in the center (equal distance between the lanes)
 
-        TODO: Docs
-        :param frame:
-        :param lanes:
-        :return:
+        :param frame: Current frame
+        :param lanes: Found lanes
+        :returns: 0 -> Go forward || -180 : 180 -> Turn || None -> Stop
         """
-        return 0
+        try:
+            # lanes => [x1, y1, x2, y2] aka [x_lwr, y_lwr, x_upr, y_upr]
+            left_lane: np.ndarray = lanes[0]
+            right_lane: np.ndarray = lanes[1]
+            center = int(frame.shape[1] / 2)
 
-    @staticmethod
-    def _apply_canny(img: np.array) -> np.array:
+            lwr_dst_to_the_left: int = abs(left_lane[0] - center)
+            lwr_dst_to_the_right: int = right_lane[0] - center
+            delta = lwr_dst_to_the_left - lwr_dst_to_the_right
+            absolute_delta = abs(delta)
+
+            if absolute_delta <= self.thresholds['straight']:
+                return 0
+            elif absolute_delta <= self.thresholds['light_turn']:
+                return delta  # FIXME: Not correct, just for testing
+            else:
+                return -145 if delta < 0 else 145  # FIXME: Not 100% correct, just for testing
+        except Exception as e:
+            # FIXME: Remove broad exception
+            print(f'[FAIL::calculate_steering_angle] {e}!')
+            return None
+
+    def _apply_canny(self, img: np.ndarray) -> np.ndarray:
         """
         Apply the Canny algorithm to the given image
 
@@ -133,17 +168,26 @@ class VideoProcessor:
         :return: The gradients image
         """
         _grayscale_image = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)  # Convert to grayscale
-        # Increase the contrast:
-        _grayscale_image = cv2.addWeighted(_grayscale_image, 3, _grayscale_image, 0, self.config['greyscaleModifier'])
-        # Increasing the contrast to give me better precision
-        # https://stackoverflow.com/questions/39308030/how-do-i-increase-the-contrast-of-an-image-in-python-opencv
-        _blurred_image = cv2.GaussianBlur(_grayscale_image, (5, 5), 0)  # Apply Gaussian Blur to image to smooth out edges
+
+        if self.config['greyscaleModifier'] != 0:
+            # Increasing the contrast to give me better precision.
+            # Note:
+            #   It can actually make the image worse sometimes, so check
+            #
+            # TODO:
+            #   Maybe add a light sensor and dynamically apply contrast?
+            #
+            # Src: https://stackoverflow.com/questions/39308030/how-do-i-increase-the-contrast-of-an-image-in-python-opencv
+            _grayscale_image = cv2.addWeighted(_grayscale_image, 3, _grayscale_image, 0, self.config['greyscaleModifier'])
+
+        _blurred_image = cv2.GaussianBlur(_grayscale_image, (5, 5), 0)  # Apply Gaussian Blur to image to smooth edges
+
         if self.config['showGrayscaleImage']:
             cv2.imshow("Greyscale", Utils.resizeWithAspectRatio(_blurred_image, height=self.config['previewHeight']))
         return cv2.Canny(_blurred_image, 50, 150)
 
     @staticmethod
-    def _apply_mask_to_frame(img: np.array) -> np.array:
+    def _apply_mask_to_frame(img: np.ndarray) -> np.ndarray:
         """
         Apply the mask to each frame
 
@@ -156,14 +200,18 @@ class VideoProcessor:
         _img_mid = int(_img_height / 2)
         # Mask :: [(lower_left, lower_right, upper_right, upper_left)]
         _mask = np.array([
-            [(100, _img_height), (_img_width - 100, _img_height), (400, _img_mid + 100), (200, _img_mid + 100)]
+            # Left lane:
+            [(0, _img_height), (175, _img_height), (250, _img_mid + 50), (175, _img_mid + 50)],
+
+            # Right lane:
+            [(_img_width - 175, _img_height), (_img_width, _img_height), (_img_width - 175, _img_mid + 50), (_img_width - 250, _img_mid + 50)]
         ])
         cv2.fillPoly(_masked, _mask, 255)
         # Show mask (for debug):
         # cv2.imshow("Lane mask", _mask)
         return cv2.bitwise_and(img, _masked)
 
-    def _average_slope_intercept(self, img: np.array, lines: np.array) -> np.array:
+    def _average_slope_intercept(self, img: np.ndarray, lines: np.ndarray) -> np.ndarray:
         """
         Average the lanes to get one smooth line
 
@@ -193,7 +241,7 @@ class VideoProcessor:
         return np.array([left_lane, right_lane])
 
     @staticmethod
-    def _get_coordinates(img: np.array, lane_fit: np.array) -> np.array:
+    def _get_coordinates(img: np.ndarray, lane_fit: np.ndarray) -> np.ndarray:
         """
         Get cartesian coordinates for the averaged lines
 
@@ -216,7 +264,7 @@ class VideoProcessor:
             return np.array([0, 0, 0, 0])
 
     @staticmethod
-    def _display_lanes(img: np.array, lanes: np.array) -> np.array:
+    def _display_lanes(img: np.ndarray, lanes: np.ndarray) -> np.ndarray:
         """
         Generate an image with the lanes on it. Also draws the center line
 
@@ -233,7 +281,7 @@ class VideoProcessor:
             try:
                 x1, y1, x2, y2 = lane
             except ValueError:
-                print('[WARN] No lanes found!')
+                print('[WARN::display_lanes] No lanes found!')
                 return _lanes_image
             try:
                 cv2.line(_lanes_image, (x1, y1), (x2, y2), (0, 255, 0), 5)

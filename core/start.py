@@ -10,7 +10,7 @@
 
  Config:
     GENERAL:
-     greyscaleModifier -> Increase Contrast: slightly: -75, significantly: -150, or lighten/decrease: positive_value
+     greyscaleModifier -> Increase Contrast: negative value, Decrease Contrast: positive value
      oneLineTrackingThreshold -> Threshold for the distance that is kept from the lane (in single-lane following mode)
 
     DEBUG:
@@ -22,21 +22,20 @@
  copyright: GNU GPL v3 License
 """
 
-__version__ = "1.1"
+__version__ = "1.2"
 
 import sys
 from controller import Controller
 from video_processor import VideoProcessor
 
 config = {
-    'greyscaleModifier': -50,
+    'greyscaleModifier': 0,
     'oneLineTrackingThreshold': 10,
 
-    'previewHeight': 480,
+    'previewHeight': 240,
     'enableDebugImages': True,
     'showMaskedImage': False,
     'showGrayscaleImage': False,
-    'showConfigText': False,
 }
 
 
@@ -50,11 +49,15 @@ def main():
 
     controller = Controller('/dev/ttyACM0', baudrate=9600)
     processor = VideoProcessor(config, controller)
-    processor.run()
+
+    try:
+        processor.run()
+    except KeyboardInterrupt:
+        print('==[Stopping]==')
+
+    # Finished / Stopped running (pressed q / ctrl-c / Exception was thrown)
+    controller.stop()
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        print('==[Stopping]==')
+    main()

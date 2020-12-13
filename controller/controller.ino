@@ -41,7 +41,7 @@
 #include "commandParser.hpp"
 #include "motors.hpp"
 
-bool DEBUG_MODE = true;
+bool DEBUG_MODE = false;
 
 Pins motorPins;
 CommandParser commandParser(DEBUG_MODE);

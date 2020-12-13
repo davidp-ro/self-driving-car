@@ -2,8 +2,8 @@
  * @file motors.hpp
  * @author David Pescariu | https://github.com/davidp-ro
  * @brief Functions that control the motors and the pin struct
- * @version 1.1
- * @date 2020-11-28
+ * @version 1.2
+ * @date 2020-12-13
  *
  * @copyright GPL-3.0 License
  */
@@ -14,7 +14,7 @@
 #include <Arduino.h>
 
 const uint8_t SPEED_SLOW = 100;
-const uint8_t SPEED_MED = 175;
+const uint8_t SPEED_MED = 110;
 const uint8_t SPEED_FAST = 255;
 
 /**

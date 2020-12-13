@@ -5,7 +5,7 @@
  copyright: GNU GPL v3 License
 """
 
-__version__ = '1.0'
+__version__ = '1.1'
 
 
 class InvalidTurnArgument(Exception):
@@ -16,6 +16,17 @@ class InvalidTurnArgument(Exception):
         :param turn_angle: Given angle
         """
         self.msg = f"Angle {turn_angle} not in -180 : 180 valid range!"
+        super().__init__(self.msg)
+
+
+class InvalidSpeed(Exception):
+    def __init__(self, speed: str):
+        """
+        If raised than the 'speed' argument is invalid.
+
+        :param speed: Given speed
+        """
+        self.msg = f"Speed {speed} invalid! Valid options: slow / med / fast"
         super().__init__(self.msg)
 
 

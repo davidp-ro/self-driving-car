@@ -5,10 +5,10 @@
  copyright: GNU GPL v3 License
 """
 
-__version__ = '1.0'
+__version__ = '1.1'
 
 import serial
-from core.utils.exceptions import InvalidTurnArgument
+from utils.exceptions import InvalidTurnArgument, InvalidSpeed
 
 
 class Controller:
@@ -44,6 +44,19 @@ class Controller:
         """
         _command = f'{command.replace(" ", "")}{self.terminator}'
         self.ser.write(_command.encode(self.encoding))
+
+    def set_speed(self, speed: str) -> None:
+        """
+        Set the motor speed
+
+        :param speed: slow / med / fast
+
+        :raises: InvalidSpeed if the speed is invalid
+        """
+        if speed in ['slow', 'med', 'fast']:
+            self._write(f'set_speed={speed}')
+        else:
+            raise InvalidSpeed(speed)
 
     def stop(self) -> None:
         """

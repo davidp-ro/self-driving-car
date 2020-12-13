@@ -21,7 +21,7 @@
 class CommandParser {
    private:
     Pins motorPins;
-    uint8_t motorSpeed;  // Defaults to SPEED_FAST
+    uint8_t motorSpeed;  // Defaults to SPEED_MED
     bool isInDebugMode;
     String lastCommand;
 

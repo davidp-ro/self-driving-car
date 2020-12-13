@@ -5,15 +5,15 @@
  copyright: GNU GPL v3 License
 """
 
-__version__ = '1.2'
+__version__ = '1.3'
 
 import numpy as np
 import cv2
 import warnings
 from typing import Dict, Union
-from core.controller import Controller
-from core.utils.exceptions import ReachedEOF
-from core.utils.utils import Utils
+from controller import Controller
+from utils.exceptions import ReachedEOF
+from utils.utils import Utils
 
 
 class VideoProcessor:
@@ -37,14 +37,14 @@ class VideoProcessor:
         :param config: Config dictionary
         :param car_controller: Controller instance
         """
-        cv2_version = cv2.version
-        print(f"[INIT] Numpy version: {np.__version__} | OpenCV version: {cv2_version}")
+        # noinspection PyUnresolvedReferences
+        print(f"[INIT] Numpy version: {np.__version__} | OpenCV version: {cv2.__version__}")
 
         self.controller = car_controller
         self.config = config
         self.thresholds = {
-            'straight': 10,
-            'light_turn': 30,
+            'straight': 60,
+            'light_turn': 100,
         }
 
     def run(self) -> None:
@@ -142,12 +142,21 @@ class VideoProcessor:
             # lanes => [x1, y1, x2, y2] aka [x_lwr, y_lwr, x_upr, y_upr]
             left_lane: np.ndarray = lanes[0]
             right_lane: np.ndarray = lanes[1]
+
+            if len(lanes[0]) != 4 or len(lanes[1]) != 4:
+                print('[WARN::calculate_steering_angle] No lanes found!')
+                return None
+
             center = int(frame.shape[1] / 2)
 
             lwr_dst_to_the_left: int = abs(left_lane[0] - center)
             lwr_dst_to_the_right: int = right_lane[0] - center
             delta = lwr_dst_to_the_left - lwr_dst_to_the_right
             absolute_delta = abs(delta)
+
+            if absolute_delta > 200:
+                print('[WARN::calculate_steering_angle] Invalid delta!')
+                return None
 
             if absolute_delta <= self.thresholds['straight']:
                 return 0
@@ -178,7 +187,8 @@ class VideoProcessor:
             #   Maybe add a light sensor and dynamically apply contrast?
             #
             # Src: https://stackoverflow.com/questions/39308030/how-do-i-increase-the-contrast-of-an-image-in-python-opencv
-            _grayscale_image = cv2.addWeighted(_grayscale_image, 3, _grayscale_image, 0, self.config['greyscaleModifier'])
+            _grayscale_image = cv2.addWeighted(_grayscale_image, 3, _grayscale_image, 0,
+                                               self.config['greyscaleModifier'])
 
         _blurred_image = cv2.GaussianBlur(_grayscale_image, (5, 5), 0)  # Apply Gaussian Blur to image to smooth edges
 
@@ -204,7 +214,8 @@ class VideoProcessor:
             [(0, _img_height), (175, _img_height), (250, _img_mid + 50), (175, _img_mid + 50)],
 
             # Right lane:
-            [(_img_width - 175, _img_height), (_img_width, _img_height), (_img_width - 175, _img_mid + 50), (_img_width - 250, _img_mid + 50)]
+            [(_img_width - 175, _img_height), (_img_width, _img_height), (_img_width - 175, _img_mid + 50),
+             (_img_width - 250, _img_mid + 50)]
         ])
         cv2.fillPoly(_masked, _mask, 255)
         # Show mask (for debug):
@@ -223,7 +234,8 @@ class VideoProcessor:
         _right_fit = []
         if lines is None:
             return np.array([(0, 0), (0, 0)])
-        for x1, y1, x2, y2 in lines:
+        for line in lines:
+            x1, y1, x2, y2 = line.reshape(4)
             _parameters = np.polyfit((x1, x2), (y1, y2), 1)
             _slope = _parameters[0]
             _intercept = _parameters[1]
@@ -281,7 +293,6 @@ class VideoProcessor:
             try:
                 x1, y1, x2, y2 = lane
             except ValueError:
-                print('[WARN::display_lanes] No lanes found!')
                 return _lanes_image
             try:
                 cv2.line(_lanes_image, (x1, y1), (x2, y2), (0, 255, 0), 5)

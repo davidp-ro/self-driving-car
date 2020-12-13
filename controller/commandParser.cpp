@@ -14,7 +14,7 @@
 
 CommandParser::CommandParser(bool DEBUG_MODE) {
     this->isInDebugMode = DEBUG_MODE;
-    this->motorSpeed = SPEED_FAST;
+    this->motorSpeed = SPEED_MED;
 }
 
 void CommandParser::setMotorSpeed(String recvSpeed) {

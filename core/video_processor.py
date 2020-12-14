@@ -43,9 +43,10 @@ class VideoProcessor:
         self.controller = car_controller
         self.config = config
         self.thresholds = {
-            'straight': 60,
-            'light_turn': 100,
+            'straight': 100,
+            'light_turn': 150,
         }
+        self.distance_to_one_lane = 230
 
     def run(self) -> None:
         """
@@ -150,18 +151,35 @@ class VideoProcessor:
             center = int(frame.shape[1] / 2)
 
             lwr_dst_to_the_left: int = abs(left_lane[0] - center)
-            lwr_dst_to_the_right: int = right_lane[0] - center
+            lwr_dst_to_the_right: int = abs(right_lane[0] - center)
             delta = lwr_dst_to_the_left - lwr_dst_to_the_right
             absolute_delta = abs(delta)
+            
+            print(f'[DISTANCES::calculate_steering_angle] l: {lwr_dst_to_the_left} r: {lwr_dst_to_the_right} d: {delta} ad: {absolute_delta}')
 
             if absolute_delta > 200:
-                print('[WARN::calculate_steering_angle] Invalid delta!')
-                return None
+                print(f'[INFO::calculate_steering_angle] Only one lane! Maintain d={self.distance_to_one_lane}')
+                if lwr_dst_to_the_left > 1000:
+                    # Maintain distance to the right lane
+                    alpha = lwr_dst_to_the_right - self.distance_to_one_lane
+                    print(f'[DEBUG::calculate_steering_angle] MAINTAIN RIGHT -> ALPHA {alpha}')
+                    if abs(alpha) <= self.thresholds['straight']:
+                        return 0
+                    else:
+                        return alpha
+                else:
+                    # Maintain distance to the left lane
+                    alpha = lwr_dst_to_the_left - self.distance_to_one_lane
+                    print(f'[DEBUG::calculate_steering_angle] MAINTAIN LEFT -> ALPHA {alpha}')
+                    if abs(alpha) <= self.thresholds['straight']:
+                        return 0
+                    else:
+                        return alpha
 
             if absolute_delta <= self.thresholds['straight']:
                 return 0
             elif absolute_delta <= self.thresholds['light_turn']:
-                return delta  # FIXME: Not correct, just for testing
+                return -1 * delta  # FIXME: Not correct, just for testing
             else:
                 return -145 if delta < 0 else 145  # FIXME: Not 100% correct, just for testing
         except Exception as e:
@@ -209,7 +227,7 @@ class VideoProcessor:
         _img_width = img.shape[1]
         _img_mid = int(_img_height / 2)
         # Mask :: [(lower_left, lower_right, upper_right, upper_left)]
-        _mask = np.array([
+        _old_mask = np.array([
             # Left lane:
             [(0, _img_height), (175, _img_height), (250, _img_mid + 50), (175, _img_mid + 50)],
 
@@ -217,9 +235,18 @@ class VideoProcessor:
             [(_img_width - 175, _img_height), (_img_width, _img_height), (_img_width - 175, _img_mid + 50),
              (_img_width - 250, _img_mid + 50)]
         ])
+        
+        _mask = np.array([
+            # left:
+            [(0, _img_height), (175, _img_height), (250, _img_mid + 50), (0, _img_mid + 50)],
+            
+            # right:
+            [(_img_width - 175, _img_height), (_img_width, _img_height), (_img_width, _img_mid + 50),
+             (_img_width - 250, _img_mid + 50)]
+        ])
         cv2.fillPoly(_masked, _mask, 255)
         # Show mask (for debug):
-        # cv2.imshow("Lane mask", _mask)
+        # cv2.imshow("Lane mask", _masked)
         return cv2.bitwise_and(img, _masked)
 
     def _average_slope_intercept(self, img: np.ndarray, lines: np.ndarray) -> np.ndarray:
@@ -297,7 +324,8 @@ class VideoProcessor:
             try:
                 cv2.line(_lanes_image, (x1, y1), (x2, y2), (0, 255, 0), 5)
             except OverflowError:
-                print(f'Overflow when drawing INNER lane!, coords: x1={x1}, y1={y1}, x2={x2}, y2={y2}')
+                # print(f'Overflow when drawing INNER lane!, coords: x1={x1}, y1={y1}, x2={x2}, y2={y2}')
+                print('[WARN::display_lanes] Overflow when drawing one of the lanes')
 
         return _lanes_image
 

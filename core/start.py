@@ -34,7 +34,7 @@ config = {
 
     'previewHeight': 240,
     'enableDebugImages': True,
-    'showMaskedImage': False,
+    'showMaskedImage': True,
     'showGrayscaleImage': False,
 }
 

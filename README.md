@@ -1,6 +1,9 @@
 # self-driving-car
 
-Building a self driving car-_(ish)_ (about 1:10 scale)
+I built a model car-_(1:10 scale)_ that would drive itself around a small course
+
+## Check out opendrive-beamng
+[View repo here](https://github.com/davidp-ro/opendrive-beamng) - I am building a self-drive system using beamNG.tech as a virtual environment
 
 ### Tasks:
 
@@ -12,16 +15,8 @@ Building a self driving car-_(ish)_ (about 1:10 scale)
 
 ### How?
 
-- I'm using the Raspberry Pi 4 with a PiCamera v2, coupled with OpenCV to detect lanes, _sorry geohot_
+- I'm using the Raspberry Pi 4 with a PiCamera v2, coupled with OpenCV to detect lanes
 - There's also an Arduino Uno that is a motor-controller and a supervisor, communicating with the Pi over serial
-
-### Gallery
-
-`TODO`
-
-### More details
-
-`TODO`
 
 ---
 
